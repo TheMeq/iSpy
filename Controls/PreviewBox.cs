@@ -232,7 +232,7 @@ namespace iSpyApplication.Controls
                     {
                         MainForm.InstanceReference.Play(movie, Oid, DisplayName);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
 
                     }

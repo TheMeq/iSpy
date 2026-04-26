@@ -18,7 +18,7 @@ namespace iSpyApplication.Realtime
 
         public delegate int InterruptCallback();
         private readonly byte[] _convOut = new byte[44100];
-        private readonly bool _isAudio;
+        private readonly bool _isAudio = false;
         private bool _abort;
         private byte[] _audioBuffer = new byte[44100];
         private int _audioBufferSizeCurrent;
@@ -26,7 +26,6 @@ namespace iSpyApplication.Realtime
         private AVFrame* _audioFrame, _videoFrame;
 
         private AVIOInterruptCB_callback_func _aviocb;
-        private bool _closing;
         private GCHandle _convHandle;
         private AVFormatContext* _formatContext;
         private int _frameNumber;

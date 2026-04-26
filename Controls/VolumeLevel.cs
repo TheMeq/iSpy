@@ -2304,6 +2304,7 @@ namespace iSpyApplication.Controls
                 {
                     Micobject.settings.active = true;
                     _errorTime = _reconnectTime = DateTime.MinValue;
+                    AudioDeviceReConnected?.Invoke(this, EventArgs.Empty);
                     DoAlert("reconnect");
                 }
                 _errorTime = DateTime.MinValue;

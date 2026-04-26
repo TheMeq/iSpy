@@ -54,7 +54,7 @@ namespace iSpyApplication.Utilities
                         Logger.LogError("VLC version unsupported. Please ensure v" + MinVersion + "+ is installed");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 Logger.LogError("Couldn't find VLC");
                 VlcHelper.VLCLocationAutoDetect = null;

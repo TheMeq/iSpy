@@ -17,6 +17,7 @@ using NAudio.Wave.SampleProviders;
 
 namespace iSpyApplication.Sources.Video
 {
+#pragma warning disable 0067
     internal class KinectStream : VideoBase, IVideoSource, IAudioSource, ISupportsAudio
     {
         private readonly Pen _inferredBonePen = new Pen(Brushes.Gray, 1);
@@ -39,7 +40,7 @@ namespace iSpyApplication.Sources.Video
         private short[] _depthPixels;
         private byte[] _colorPixels;
 
-        public IAudioSource OutAudio;
+        public IAudioSource OutAudio = null;
 
         #region Audio
         private float _gain;
@@ -167,7 +168,7 @@ namespace iSpyApplication.Sources.Video
             }
         }
 
-        public bool MousePointer;
+        public bool MousePointer = false;
 
         public void Start()
         {
@@ -769,4 +770,5 @@ namespace iSpyApplication.Sources.Video
         }
 
     }
+#pragma warning restore 0067
 }

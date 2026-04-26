@@ -4,6 +4,7 @@ using NAudio.Wave;
 
 namespace iSpyApplication.Sources.Audio.streams
 {
+#pragma warning disable 0067
     class AudioInStream: IAudioSource
     {
         public int PacketSize = 882;
@@ -124,4 +125,5 @@ namespace iSpyApplication.Sources.Audio.streams
 
         public WaveFormat RecordingFormat { get; set; }
     }
+#pragma warning restore 0067
 }

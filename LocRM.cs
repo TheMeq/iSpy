@@ -126,7 +126,7 @@ namespace iSpyApplication
                     {
                         Res.Add((ls.CultureCode + "." + t.Token.ToLower()), t.Value);
                     }
-                    catch(Exception ex)
+                    catch(Exception)
                     {
                         //ignore duplicates
                     }

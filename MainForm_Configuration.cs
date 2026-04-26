@@ -327,7 +327,7 @@ namespace iSpyApplication
                     {
                         Group = (MainForm.Conf.Permissions.First(p => p.name == _conf.ChosenGroupName)).name;
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     { }
                 }
                     
@@ -3385,7 +3385,6 @@ namespace iSpyApplication
         private void LoadConfiguration(string fileName)
         {
             var s = new XmlSerializer(typeof(configuration));
-            bool loaded = false;
             lock (ThreadLock)
             {
                 using (var fs = new FileStream(fileName, FileMode.Open))
@@ -3402,7 +3401,6 @@ namespace iSpyApplication
                                 _conf.ChosenGroupName = EncDec.DecryptData(_conf.ChosenGroupName, "582df37b-b7cc-43f7-a442-30a2b188a888");
                             }
 
-                            loaded = true;
                         }
                     }
                     catch (Exception ex)

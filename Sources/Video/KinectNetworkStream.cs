@@ -12,6 +12,7 @@ using NAudio.Wave.SampleProviders;
 
 namespace iSpyApplication.Sources.Video
 {
+#pragma warning disable 0067
     /// <summary>
     /// iSpyKinect provider stream for video and audio from an iSpyKinect network instance
     /// </summary>
@@ -51,7 +52,7 @@ namespace iSpyApplication.Sources.Video
         private SampleChannel _sampleChannel;
 
         public BufferedWaveProvider WaveOutProvider { get; set; }
-        public IAudioSource OutAudio;
+        public IAudioSource OutAudio = null;
         #endregion
 
         #region Audio Stuff
@@ -603,5 +604,6 @@ namespace iSpyApplication.Sources.Video
             _disposed = true;
         }
     }
+#pragma warning restore 0067
 
 }

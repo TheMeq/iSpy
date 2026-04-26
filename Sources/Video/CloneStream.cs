@@ -4,6 +4,7 @@ using NAudio.Wave;
 
 namespace iSpyApplication.Sources.Video
 {
+#pragma warning disable 0067
     public class CloneStream : IVideoSource, IAudioSource
     {
         private readonly IVideoSource _source;
@@ -94,4 +95,5 @@ namespace iSpyApplication.Sources.Video
             _disposed = true;
         }
     }
+#pragma warning restore 0067
 }

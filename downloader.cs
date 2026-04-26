@@ -15,7 +15,7 @@ namespace iSpyApplication
         public string Format;
         public string UnzipTo;
         public bool Success;
-        private bool aborting;
+        private bool aborting = false;
         //private bool cancel;
 
         public downloader()
