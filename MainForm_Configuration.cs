@@ -1694,7 +1694,7 @@ namespace iSpyApplication
                         break;
                     }
                 }
-                Application.DoEvents();
+                _pnlCameras.Update();
             }
 
 
@@ -1819,12 +1819,13 @@ namespace iSpyApplication
         private DateTime _oldestFile = DateTime.MinValue;
         private void DeleteOldFiles()
         {
+            var cancellationToken = _storageCancellation?.Token ?? CancellationToken.None;
             bool fileschanged = false;
             //walk through camera specific management first
 
             foreach (var camobj in Cameras)
             {
-                if (ShuttingDown)
+                if (ShuttingDown || cancellationToken.IsCancellationRequested)
                     return;
 
                 if (camobj.settings.storagemanagement.enabled)
@@ -1855,6 +1856,9 @@ namespace iSpyApplication
                             {
                                 for (int i = 0; i < lFi.Count; i++)
                                 {
+                                    if (cancellationToken.IsCancellationRequested)
+                                        return;
+
                                     var fi = lFi[i];
                                     if (FileOperations.DeleteOrArchive(cw, fi.FullName, archive))
                                     {
@@ -1873,7 +1877,8 @@ namespace iSpyApplication
                                         i--;
                                         if (size < targetSize)
                                             break;
-                                        Thread.Sleep(5);
+                                        if (cancellationToken.WaitHandle.WaitOne(5))
+                                            return;
                                     }
                                 }
                             }
@@ -1881,6 +1886,9 @@ namespace iSpyApplication
                             lFi = lFi.FindAll(p => p.CreationTime < targetdate).ToList();
                             for (int i = 0; i < lFi.Count; i++)
                             {
+                                if (cancellationToken.IsCancellationRequested)
+                                    return;
+
                                 var fi = lFi[i];
                                 if (FileOperations.DeleteOrArchive(cw, fi.FullName, archive))
                                 {
@@ -1895,7 +1903,8 @@ namespace iSpyApplication
                                     fileschanged = true;
                                     lFi.Remove(fi);
                                     i--;
-                                    Thread.Sleep(5);
+                                    if (cancellationToken.WaitHandle.WaitOne(5))
+                                        return;
                                 }
                             }
                         }
@@ -1910,7 +1919,7 @@ namespace iSpyApplication
 
             foreach (var micobj in Microphones)
             {
-                if (ShuttingDown)
+                if (ShuttingDown || cancellationToken.IsCancellationRequested)
                     return;
 
                 if (micobj.settings.storagemanagement.enabled)
@@ -1942,6 +1951,9 @@ namespace iSpyApplication
                             {
                                 for (int i = 0; i < lFi.Count; i++)
                                 {
+                                    if (cancellationToken.IsCancellationRequested)
+                                        return;
+
                                     var fi = lFi[i];
                                     if (FileOperations.DeleteOrArchive(vl,fi.FullName, archive))
                                     {
@@ -1956,7 +1968,8 @@ namespace iSpyApplication
                                         size -= fi.Length;
                                         fileschanged = true;
                                         lFi.Remove(fi);
-                                        Thread.Sleep(5);
+                                        if (cancellationToken.WaitHandle.WaitOne(5))
+                                            return;
                                         i--;
                                         if (size < targetSize)
                                             break;
@@ -1967,6 +1980,9 @@ namespace iSpyApplication
                             lFi = lFi.FindAll(p => p.CreationTime < targetdate).ToList();
                             for (int i = 0; i < lFi.Count; i++)
                             {
+                                if (cancellationToken.IsCancellationRequested)
+                                    return;
+
                                 var fi = lFi[i];
                                 if (FileOperations.DeleteOrArchive(vl, fi.FullName, archive))
                                 {
@@ -1980,7 +1996,8 @@ namespace iSpyApplication
                                     }
                                     fileschanged = true;
                                     lFi.Remove(fi);
-                                    Thread.Sleep(5);
+                                    if (cancellationToken.WaitHandle.WaitOne(5))
+                                        return;
                                     i--;
                                 }
                             }
@@ -2001,7 +2018,7 @@ namespace iSpyApplication
             //run storage management on each directory
             foreach (var d in Conf.MediaDirectories)
             {
-                if (ShuttingDown)
+                if (ShuttingDown || cancellationToken.IsCancellationRequested)
                     return;
 
                 if (d.Enable_Storage_Management)
@@ -2047,6 +2064,9 @@ namespace iSpyApplication
 
                     for (int i = 0; i < lCan.Count; i++)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                            return;
+
                         var fi = lCan[i];
                         string folder = "";
                         try
@@ -2075,7 +2095,8 @@ namespace iSpyApplication
                             {
                                 break;
                             }
-                            Thread.Sleep(5);
+                            if (cancellationToken.WaitHandle.WaitOne(5))
+                                return;
                         }
                     
                     }
@@ -2437,7 +2458,7 @@ namespace iSpyApplication
                 NeedsSync = true;
                 SetNewStartPosition();
             }
-            Application.DoEvents();
+            _pnlCameras.Update();
             cameraControl.Dispose();
             if (!_shuttingDown)
             {
@@ -2523,7 +2544,7 @@ namespace iSpyApplication
                 SetNewStartPosition();
                 NeedsSync = true;
             }
-            Application.DoEvents();
+            _pnlCameras.Update();
             volumeControl.Dispose();
         }
 
@@ -3443,12 +3464,13 @@ namespace iSpyApplication
             }
             _houseKeepingTimer.Stop();
             _tsslStats.Text = LocRm.GetString("Loading");
-            Application.DoEvents();
+            statusStrip1.Update();
             RemoveObjects();
             flowPreview.Loading = true;
+            flowPreview.Update();
             LoadObjects(fileName);
             RenderObjects();
-            Application.DoEvents();
+            _pnlCameras.Update();
             LayoutPanel.NeedsRedraw = true;
             try
             {

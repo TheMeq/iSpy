@@ -342,6 +342,7 @@ namespace iSpyApplication
         private ToolStripMenuItem _showToolstripMenuItem;
         private bool _shuttingDown;
         private string _startCommand = "";
+        private CancellationTokenSource _storageCancellation;
         private Thread _storageThread;
         private ToolStripMenuItem _switchAllOffToolStripMenuItem;
         private ToolStripMenuItem _switchAllOnToolStripMenuItem;
@@ -1901,6 +1902,7 @@ namespace iSpyApplication
                 }
 
                 HighCPU = CpuTotal > _conf.CPUMax;
+                RuntimeProfiler.LogIfDue(CpuUsage, CpuTotal, _counters);
             }
             else
             {
@@ -2052,7 +2054,8 @@ namespace iSpyApplication
 
                 if (abortIfRunning)
                 {
-                    Logger.LogMessage("Storage Management is already running; abort request ignored");
+                    _storageCancellation?.Cancel();
+                    Logger.LogMessage("Storage Management cancellation requested");
                     return;
                 }
             }
@@ -2066,6 +2069,8 @@ namespace iSpyApplication
                     if (r)
                     {
                         Logger.LogMessage("Running Storage Management");
+                        _storageCancellation?.Dispose();
+                        _storageCancellation = new CancellationTokenSource();
                         _storageThread = new Thread(DeleteOldFiles) {IsBackground = true};
                         _storageThread.Start();
                     }
@@ -2272,8 +2277,6 @@ namespace iSpyApplication
             {
                 Logger.LogException(ex);
             }
-
-            Application.DoEvents();
             try
             {
                 message = MWS.StartServer();
@@ -2649,6 +2652,7 @@ namespace iSpyApplication
             {
                 try
                 {
+                    _storageCancellation?.Cancel();
                     _storageThread.Join(ThreadKillDelay);
                 }
                 catch
@@ -4396,7 +4400,6 @@ namespace iSpyApplication
                 }
                 return;
             }
-            Application.DoEvents();
             TalkCamera = cw;
             _talkSource = new TalkDeviceStream(Conf.TalkMic) {RecordingFormat = new WaveFormat(8000, 16, 1)};
             _talkSource.AudioFinished += _talkSource_AudioFinished;
@@ -6781,9 +6784,9 @@ namespace iSpyApplication
             }
             _houseKeepingTimer.Stop();
             _tsslStats.Text = LocRm.GetString("Loading");
-            Application.DoEvents();
             RemoveObjects();
             flowPreview.Loading = true;
+            flowPreview.Update();
 
             _cameras = new List<objectsCamera>();
             _microphones = new List<objectsMicrophone>();
@@ -6791,7 +6794,7 @@ namespace iSpyApplication
             _actions = new List<objectsActionsEntry>();
 
             RenderObjects();
-            Application.DoEvents();
+            _pnlCameras.Update();
             try
             {
                 _houseKeepingTimer.Start();

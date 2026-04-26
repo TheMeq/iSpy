@@ -3067,7 +3067,10 @@ namespace iSpyApplication.Controls
                 if (_lastRedraw < Helper.Now.AddMilliseconds(0 - 1000 / MainForm.Conf.MaxRedrawRate))
                 {
                     LastFrame = e.Frame;
+                    RuntimeProfiler.RecordCameraRedraw(Camobject.id);
                 }
+
+                RuntimeProfiler.RecordCameraFrame(Camobject.id, Camobject.name, Buffer.Count, Recording);
                 
 
                 if (_reconnectTarget != DateTime.MinValue)
@@ -4174,8 +4177,6 @@ namespace iSpyApplication.Controls
                         MainForm.InstanceReference.TalkTo(this, false);
                 
 
-                Application.DoEvents();
-
                 if (SavingTimeLapse)
                 {
                     CloseTimeLapseWriter();
@@ -4228,8 +4229,6 @@ namespace iSpyApplication.Controls
 
                         if (!IsClone)
                         {
-                            Application.DoEvents();
-
                             if (stopSource)
                             {
                                 lock (_lockobject)

@@ -386,8 +386,7 @@ namespace iSpyApplication.Sources.Audio.streams
             _stopEvent.Set();
             try
             {
-                while (_thread != null && !_thread.Join(0))
-                    Application.DoEvents();
+                _thread?.Join(5000);
             }
             catch
             {
