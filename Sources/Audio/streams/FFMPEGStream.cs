@@ -293,7 +293,7 @@ namespace iSpyApplication.Sources.Audio.streams
                             var sampleBuffer = new float[data.Length];
                             int read = _sampleChannel.Read(sampleBuffer, 0, data.Length);
                             
-                            da(this, new DataAvailableEventArgs((byte[])data.Clone(),read));
+                            SafeEventDispatch.DataAvailable(da, this, new DataAvailableEventArgs((byte[])data.Clone(),read), "FFMPEGStream data available");
 
                             if (Listening)
                             {

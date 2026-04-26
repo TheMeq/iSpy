@@ -1767,8 +1767,15 @@ namespace iSpyApplication.Sources.Video
                 var sf = SnapshotFrame;
                 if (sf != null && !_abort.WaitOne(0) && !MainForm.ShuttingDown)
                 {
-                    sf(this, new NewFrameEventArgs(image));
-                    _lastFrame = DateTime.UtcNow;
+                    try
+                    {
+                        sf(this, new NewFrameEventArgs(image));
+                        _lastFrame = DateTime.UtcNow;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogException(ex, "VideoCaptureDevice snapshot frame");
+                    }
                 }
             }
         }

@@ -45,6 +45,7 @@ namespace iSpyApplication.Controls
         public double Framerate;
         public double RealFramerate;
         private Queue<double> _framerates;
+        private double _framerateTotal;
         private HSLFiltering _filter;
         private readonly object _sync = new object();
         private MotionDetector _motionDetector;
@@ -391,6 +392,7 @@ namespace iSpyApplication.Controls
             if (VideoSource != null)
             {
                 _framerates = new Queue<double>();
+                _framerateTotal = 0;
                 LastFrameEvent = DateTime.MinValue;
                 _motionRecentlyDetected = false;
                 if (!CW.IsClone)
@@ -948,10 +950,15 @@ namespace iSpyApplication.Controls
         private void CalculateFramerates()
         {
             TimeSpan tsFr = Helper.Now - LastFrameEvent;
-            _framerates.Enqueue(1000d/tsFr.TotalMilliseconds);
+            if (tsFr.TotalMilliseconds <= 0)
+                return;
+
+            var frameRate = 1000d/tsFr.TotalMilliseconds;
+            _framerates.Enqueue(frameRate);
+            _framerateTotal += frameRate;
             if (_framerates.Count >= 30)
-                _framerates.Dequeue();
-            Framerate = _framerates.Average();
+                _framerateTotal -= _framerates.Dequeue();
+            Framerate = _framerateTotal / _framerates.Count;
         }
 
         private void ApplyMask(Bitmap bmOrig)
@@ -1076,6 +1083,7 @@ namespace iSpyApplication.Controls
             BackBrush?.Dispose();
             DrawFont?.Dispose();
             _framerates?.Clear();
+            _framerateTotal = 0;
                 
             Mask?.Dispose();
             Mask = null;

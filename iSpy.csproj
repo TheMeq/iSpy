@@ -1024,6 +1024,7 @@
     <Compile Include="Utilities\ReadFullyStream.cs" />
     <Compile Include="Utilities\RequestState.cs" />
     <Compile Include="Utilities\RuntimeProfiler.cs" />
+    <Compile Include="Utilities\SafeEventDispatch.cs" />
     <Compile Include="Utilities\ScreenArea.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -1,5 +1,7 @@
 ﻿using System.Drawing;
+using System;
 using iSpyApplication.Sources.Audio;
+using iSpyApplication.Utilities;
 using NAudio.Wave;
 
 namespace iSpyApplication.Sources.Video
@@ -55,9 +57,22 @@ namespace iSpyApplication.Sources.Video
 
         void SourceNewFrame(object sender, NewFrameEventArgs eventArgs)
         {
+            if (eventArgs.Frame == null)
+                return;
+
             var bm = (Bitmap)eventArgs.Frame.Clone();
-            NewFrame?.Invoke(this, new NewFrameEventArgs(bm));
-            bm.Dispose();
+            try
+            {
+                NewFrame?.Invoke(this, new NewFrameEventArgs(bm));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "CloneStream.SourceNewFrame");
+            }
+            finally
+            {
+                bm.Dispose();
+            }
         }
 
 

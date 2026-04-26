@@ -220,7 +220,7 @@ namespace iSpyApplication.Sources.Audio.streams
                 var sampleBuffer = new float[e.BytesRecorded];
                 int read = sc.Read(sampleBuffer, 0, e.BytesRecorded);
 
-                da(this, new DataAvailableEventArgs((byte[])e.Buffer.Clone(), read));
+                SafeEventDispatch.DataAvailable(da, this, new DataAvailableEventArgs((byte[])e.Buffer.Clone(), read), "LocalDeviceStream data available");
 
                 if (Listening)
                 {
