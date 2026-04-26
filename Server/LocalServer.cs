@@ -1520,7 +1520,7 @@ namespace iSpyApplication.Server
                     MainForm.InstanceReference.JoystickSensitivityProfile = MainForm.JoystickSensitivityProfile_E.High_JoystickSensitivity;
                     break;
                 case "shutdown":
-                    (new Thread(() => MainForm.InstanceReference.ExternalClose())).Start();
+                    (new Thread(() => MainForm.InstanceReference.ExternalClose()) { IsBackground = true }).Start();
                     break;
                 case "shutdowncomputer":
                     if (MessageBox.Show("Are you sure? ( Pressing OK will shutdown computer!! )", "Shutdown", MessageBoxButtons.OKCancel) ==

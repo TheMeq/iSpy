@@ -171,7 +171,8 @@ namespace iSpyApplication.Sources.Audio.streams
                 _res = ReasonToFinishPlaying.DeviceLost;
                 _thread = new Thread(StreamMP3)
                 {
-                    Name = "MP3 Audio Receiver (" + _source + ")"
+                    Name = "MP3 Audio Receiver (" + _source + ")",
+                    IsBackground = true
                 };
                 _thread.Start();
 

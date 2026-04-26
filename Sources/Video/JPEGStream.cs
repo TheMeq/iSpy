@@ -261,7 +261,7 @@ namespace iSpyApplication.Sources.Video
                             {
                                 using (var bitmap = (Bitmap) Image.FromStream(ms))
                                 {
-                                    NewFrame(this, new NewFrameEventArgs(bitmap));
+                                    SafeRaiseNewFrame(new NewFrameEventArgs(bitmap));
                                 }
                             }
                         }
@@ -294,8 +294,32 @@ namespace iSpyApplication.Sources.Video
                 }
             }
 
-            PlayingFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
+            SafeRaisePlayingFinished();
             _abort.Close();
+        }
+
+        private void SafeRaiseNewFrame(NewFrameEventArgs args)
+        {
+            try
+            {
+                NewFrame?.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "JPEG new frame");
+            }
+        }
+
+        private void SafeRaisePlayingFinished()
+        {
+            try
+            {
+                PlayingFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "JPEG finished");
+            }
         }
 
         // Protected implementation of Dispose pattern. 

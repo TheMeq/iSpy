@@ -160,7 +160,7 @@ namespace iSpyApplication.Sources.Video.Ximea
                     _res = ReasonToFinishPlaying.DeviceLost;
 
                     // create and start new thread
-                    _thread = new Thread(WorkerThread) {Name = Source};
+                    _thread = new Thread(WorkerThread) {Name = Source, IsBackground = true};
                     _thread.Start( );
                 }
             }
@@ -313,7 +313,14 @@ namespace iSpyApplication.Sources.Video.Ximea
                     {
                         using (var bitmap = _camera.GetImage(15000, false))
                         {
-                            NewFrame?.Invoke(this, new NewFrameEventArgs(bitmap));
+                            try
+                            {
+                                NewFrame?.Invoke(this, new NewFrameEventArgs(bitmap));
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogException(ex, "XimeaVideoSource new frame");
+                            }
                         }
                     }
                 }

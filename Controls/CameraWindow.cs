@@ -567,7 +567,7 @@ namespace iSpyApplication.Controls
             {
                 if (_tScan == null || _tScan.Join(TimeSpan.Zero))
                 {
-                    _tScan = new Thread(ScanFiles);
+                    _tScan = new Thread(ScanFiles) { IsBackground = true };
                     _tScan.Start();
                 }
             }
@@ -700,7 +700,7 @@ namespace iSpyApplication.Controls
             {
                 if (_tFiles == null || _tFiles.Join(TimeSpan.Zero))
                 {
-                    _tFiles = new Thread(GenerateFileList);
+                    _tFiles = new Thread(GenerateFileList) { IsBackground = true };
                     _tFiles.Start();
                 }
             }
@@ -4148,7 +4148,8 @@ namespace iSpyApplication.Controls
 
             if (InvokeRequired)
             {
-                Invoke(new Delegates.DisableDelegate(Disable), stopSource);
+                if (!IsDisposed && IsHandleCreated)
+                    BeginInvoke(new Delegates.DisableDelegate(Disable), stopSource);
                 return;
             }
             
@@ -4424,7 +4425,8 @@ namespace iSpyApplication.Controls
 
             if (InvokeRequired)
             {
-                Invoke(new Delegates.EnableDelegate(Enable));
+                if (!IsDisposed && IsHandleCreated)
+                    BeginInvoke(new Delegates.EnableDelegate(Enable));
                 return;
             }
 
@@ -4768,7 +4770,8 @@ namespace iSpyApplication.Controls
         {
             if (InvokeRequired)
             {
-                Invoke(new Delegates.AddAudioDelegate(AddAudioStream));
+                if (!IsDisposed && IsHandleCreated)
+                    BeginInvoke(new Delegates.AddAudioDelegate(AddAudioStream));
                 return;
             }
             AddAudioStream();

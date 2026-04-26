@@ -209,7 +209,7 @@ namespace iSpyApplication
             {
                 string ip = IP;
                 int k = j;
-                var scanner = new Thread(p => PortScanner(ports, ip, manualEvents[k]));
+                var scanner = new Thread(p => PortScanner(ports, ip, manualEvents[k])) { IsBackground = true };
                 scanner.Start();
 
                 j = WaitHandle.WaitAny(manualEvents);
@@ -231,7 +231,7 @@ namespace iSpyApplication
                         {
                             int k = j;
                             manualEvents[k].Reset();
-                            var scanner = new Thread(p => PortScanner(ports, ip, manualEvents[k]));
+                            var scanner = new Thread(p => PortScanner(ports, ip, manualEvents[k])) { IsBackground = true };
                             scanner.Start();
 
                             j = WaitHandle.WaitAny(manualEvents);

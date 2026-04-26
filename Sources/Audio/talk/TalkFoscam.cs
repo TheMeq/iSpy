@@ -261,7 +261,7 @@ namespace iSpyApplication.Sources.Audio.talk
         {
             _stopEvent = new ManualResetEvent(false);
             
-            var t = new Thread(CommsThread);
+            var t = new Thread(CommsThread) { IsBackground = true };
             t.Start();
         }
         

@@ -615,7 +615,14 @@ namespace iSpyApplication.Controls
                 }
             }
 
-            nf.Invoke(this, new NewFrameEventArgs(bmOrig));
+            try
+            {
+                nf.Invoke(this, new NewFrameEventArgs(bmOrig));
+            }
+            catch (Exception ex)
+            {
+                ErrorHandler?.Invoke(ex.Message);
+            }
 
 
             if (bMotion)

@@ -40,7 +40,7 @@ namespace iSpyApplication.CameraDiscovery
             _quit = false;
             Finished.Reset();
             
-            Urlscanner = new Thread(() => ListCameras(l, Model));
+            Urlscanner = new Thread(() => ListCameras(l, Model)) { IsBackground = true };
             Urlscanner.Start();
         }
 

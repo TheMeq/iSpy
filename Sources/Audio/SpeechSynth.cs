@@ -13,7 +13,7 @@ namespace iSpyApplication.Sources.Audio
     {
         public static void Say(string text,CameraWindow cw)
         {
-            var t = new Thread(() => SynthToCam(Uri.UnescapeDataString(text), cw));
+            var t = new Thread(() => SynthToCam(Uri.UnescapeDataString(text), cw)) { IsBackground = true };
             t.Start();
         }
         private static void SynthToCam(string text, CameraWindow cw)

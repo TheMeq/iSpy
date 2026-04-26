@@ -13,7 +13,7 @@ namespace iSpyApplication.Sources.Audio
     {
         public static void Play(string fileName, CameraWindow cw)
         {
-            var t = new Thread(() => SynthToCam(fileName, cw));
+            var t = new Thread(() => SynthToCam(fileName, cw)) { IsBackground = true };
             t.Start();
         }
 

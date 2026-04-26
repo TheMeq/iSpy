@@ -175,7 +175,8 @@ namespace iSpyApplication.Sources.Audio.streams
             _res = ReasonToFinishPlaying.DeviceLost;
             _thread = new Thread(StreamWav)
                       {
-                          Name = "WavStream Audio Receiver (" + _source + ")"
+                          Name = "WavStream Audio Receiver (" + _source + ")",
+                          IsBackground = true
                       };
             _thread.Start();
         }

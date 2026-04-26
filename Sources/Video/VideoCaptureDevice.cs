@@ -1739,7 +1739,14 @@ namespace iSpyApplication.Sources.Video
             
             var dae = new NewFrameEventArgs(bmp);
             _lastFrame = DateTime.UtcNow;
-            nf.Invoke(this, dae);
+            try
+            {
+                nf.Invoke(this, dae);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "VideoCaptureDevice new frame");
+            }
             bmp.Dispose();
 
 

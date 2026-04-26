@@ -254,7 +254,7 @@ namespace iSpyApplication
             {
                 if (_pingRequestThread == null)
                 {
-                    _pingRequestThread = new Thread(DoPingRequest);
+                    _pingRequestThread = new Thread(DoPingRequest) { IsBackground = true };
                     _pingRequestThread.Start();
                 }
             }

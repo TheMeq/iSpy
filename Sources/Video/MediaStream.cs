@@ -637,7 +637,7 @@ namespace iSpyApplication.Sources.Video
                 {
                     if (HasAudioStream != null)
                     {
-                        HasAudioStream?.Invoke(this, EventArgs.Empty);
+                        SafeRaiseHasAudioStream();
                         HasAudioStream = null;
                     }
 
@@ -727,7 +727,7 @@ namespace iSpyApplication.Sources.Video
                                     var read = sampleChannel.Read(sampleBuffer, 0, s);
 
 
-                                    da(this, new DataAvailableEventArgs(ba, s));
+                                    SafeRaiseDataAvailable(da, new DataAvailableEventArgs(ba, s));
 
 
                                     if (Listening) WaveOutProvider?.AddSamples(ba, 0, read);
@@ -931,6 +931,30 @@ namespace iSpyApplication.Sources.Video
             }
         }
 
+        private void SafeRaiseHasAudioStream()
+        {
+            try
+            {
+                HasAudioStream?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, SourceName + ": Media Stream (has audio)");
+            }
+        }
+
+        private void SafeRaiseDataAvailable(DataAvailableEventHandler handler, DataAvailableEventArgs args)
+        {
+            try
+            {
+                handler?.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, SourceName + ": Media Stream (audio data)");
+            }
+        }
+
         private void SafeRaisePlayingFinished()
         {
             try
@@ -989,7 +1013,14 @@ namespace iSpyApplication.Sources.Video
         }
         private void SampleChannelPreVolumeMeter(object sender, StreamVolumeEventArgs e)
         {
-            LevelChanged?.Invoke(this, new LevelChangedEventArgs(e.MaxSampleValues));
+            try
+            {
+                LevelChanged?.Invoke(this, new LevelChangedEventArgs(e.MaxSampleValues));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, SourceName + ": Media Stream (level)");
+            }
         }
 
         // Protected implementation of Dispose pattern. 

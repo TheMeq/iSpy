@@ -1824,6 +1824,9 @@ namespace iSpyApplication
 
             foreach (var camobj in Cameras)
             {
+                if (ShuttingDown)
+                    return;
+
                 if (camobj.settings.storagemanagement.enabled)
                 {
                     try
@@ -1907,6 +1910,9 @@ namespace iSpyApplication
 
             foreach (var micobj in Microphones)
             {
+                if (ShuttingDown)
+                    return;
+
                 if (micobj.settings.storagemanagement.enabled)
                 {
                     try
@@ -1932,7 +1938,7 @@ namespace iSpyApplication
 
                             var size = lFi.Sum(p => p.Length);
                             var targetSize = (micobj.settings.storagemanagement.maxsize) * 1048576d;
-                            while (size > targetSize)
+                            if (size > targetSize)
                             {
                                 for (int i = 0; i < lFi.Count; i++)
                                 {
@@ -1952,6 +1958,8 @@ namespace iSpyApplication
                                         lFi.Remove(fi);
                                         Thread.Sleep(5);
                                         i--;
+                                        if (size < targetSize)
+                                            break;
                                     }
                                 }
                             }
@@ -1993,6 +2001,9 @@ namespace iSpyApplication
             //run storage management on each directory
             foreach (var d in Conf.MediaDirectories)
             {
+                if (ShuttingDown)
+                    return;
+
                 if (d.Enable_Storage_Management)
                 {
                     if (d.DeleteFilesOlderThanDays <= 0)

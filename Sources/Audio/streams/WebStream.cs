@@ -191,7 +191,8 @@ namespace iSpyApplication.Sources.Audio.streams
                 _res = ReasonToFinishPlaying.DeviceLost;
                 _thread = new Thread(WebStreamListener)
                                           {
-                                              Name = "WebStream Audio Receiver"
+                                              Name = "WebStream Audio Receiver",
+                                              IsBackground = true
                                           };
                 _thread.Start();
 

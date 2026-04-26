@@ -191,7 +191,8 @@ namespace iSpyApplication.Sources.Audio.streams
                 _abort.Reset();
                 _thread = new Thread(DirectStreamListener)
                                           {
-                                              Name = "DirectStream Audio Receiver"
+                                              Name = "DirectStream Audio Receiver",
+                                              IsBackground = true
                                           };
                 _thread.Start();
 

@@ -203,7 +203,8 @@ namespace iSpyApplication.Sources.Audio.streams
 
                 _thread = new Thread(FfmpegListener)
                           {
-                              Name = "FFMPEG Audio Receiver (" + _source + ")"
+                              Name = "FFMPEG Audio Receiver (" + _source + ")",
+                              IsBackground = true
                           };
                 _thread.Start();
             }

@@ -2052,14 +2052,8 @@ namespace iSpyApplication
 
                 if (abortIfRunning)
                 {
-                    try
-                    {
-                        _storageThread.Abort();
-                    }
-                    catch
-                    {
-                        //may have exited
-                    }
+                    Logger.LogMessage("Storage Management is already running; abort request ignored");
+                    return;
                 }
             }
             if (!StorageThreadRunning)
@@ -2318,7 +2312,7 @@ namespace iSpyApplication
                 return;
             }
 
-            _updateChecker = new Thread(() => DoUpdateCheck(suppressMessages));
+            _updateChecker = new Thread(() => DoUpdateCheck(suppressMessages)) { IsBackground = true };
             _updateChecker.Start();
         }
 

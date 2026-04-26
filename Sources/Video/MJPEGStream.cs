@@ -491,7 +491,7 @@ namespace iSpyApplication.Sources.Video
                                                 using (var bmp = (Bitmap) Image.FromStream(ms))
                                                 {
                                                     var da = new NewFrameEventArgs(bmp);
-                                                    nf.Invoke(this, da);
+                                                    SafeRaiseNewFrame(nf, da);
                                                 }
                                             }
                                         }
@@ -502,7 +502,7 @@ namespace iSpyApplication.Sources.Video
                                                 using (var bmp = (Bitmap) Image.FromStream(ms))
                                                 {
                                                     var da = new NewFrameEventArgs(bmp);
-                                                    nf.Invoke(this, da);
+                                                    SafeRaiseNewFrame(nf, da);
                                                 }
                                             }
                                         }
@@ -564,8 +564,32 @@ namespace iSpyApplication.Sources.Video
                 }
             }
 
-            PlayingFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
+            SafeRaisePlayingFinished();
             _abort.Close();
+        }
+
+        private void SafeRaiseNewFrame(NewFrameEventHandler handler, NewFrameEventArgs args)
+        {
+            try
+            {
+                handler?.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "MJPEG new frame");
+            }
+        }
+
+        private void SafeRaisePlayingFinished()
+        {
+            try
+            {
+                PlayingFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "MJPEG finished");
+            }
         }
 
         // Protected implementation of Dispose pattern. 

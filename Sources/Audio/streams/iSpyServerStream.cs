@@ -194,7 +194,8 @@ namespace iSpyApplication.Sources.Audio.streams
 
                 _thread = new Thread(SpyServerListener)
                           {
-                              Name = "iSpyServer Audio Receiver (" + _source + ")"
+                              Name = "iSpyServer Audio Receiver (" + _source + ")",
+                              IsBackground = true
                           };
                 _thread.Start();
             }

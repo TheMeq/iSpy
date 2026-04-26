@@ -387,7 +387,7 @@ namespace iSpyApplication.Sources.Video
                             }
                         }
                         // notify client
-                        NewFrame?.Invoke(this, new NewFrameEventArgs(bmap));
+                        SafeRaiseNewFrame(new NewFrameEventArgs(bmap));
                         // release the image
                         bmap.Dispose();
                     }
@@ -449,7 +449,7 @@ namespace iSpyApplication.Sources.Video
                                 }
                             }
                             // notify client
-                            NewFrame?.Invoke(this, new NewFrameEventArgs(bmap));
+                            SafeRaiseNewFrame(new NewFrameEventArgs(bmap));
                             // release the image
                             bmap.Dispose();
                         }
@@ -609,6 +609,18 @@ namespace iSpyApplication.Sources.Video
                 PlayingFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
             }
 
+        }
+
+        private void SafeRaiseNewFrame(NewFrameEventArgs args)
+        {
+            try
+            {
+                NewFrame?.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, "KinectStream new frame");
+            }
         }
 
         public void Restart()

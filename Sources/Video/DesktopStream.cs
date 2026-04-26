@@ -190,7 +190,14 @@ namespace iSpyApplication.Sources.Video
                                 }
                             }
                             // notify client
-                            nf.Invoke(this, new NewFrameEventArgs(target));
+                            try
+                            {
+                                nf.Invoke(this, new NewFrameEventArgs(target));
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogException(ex, "DesktopStream new frame");
+                            }
                             _error = false;
                         }
                     }

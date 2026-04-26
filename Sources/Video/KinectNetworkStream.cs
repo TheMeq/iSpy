@@ -456,7 +456,14 @@ namespace iSpyApplication.Sources.Video
                                                     using (var bmp = (Bitmap) Image.FromStream(ms))
                                                     {
                                                         var dae = new NewFrameEventArgs(bmp);
-                                                        nf.Invoke(this, dae);
+                                                        try
+                                                        {
+                                                            nf.Invoke(this, dae);
+                                                        }
+                                                        catch (Exception ex)
+                                                        {
+                                                            Logger.LogException(ex, "KinectNetworkStream new frame");
+                                                        }
                                                     }
                                                 }
                                             }

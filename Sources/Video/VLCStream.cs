@@ -365,13 +365,26 @@ namespace iSpyApplication.Sources.Video
             {
                 var l = _size.Width * _size.Height * 4;
                 GC.AddMemoryPressure(l);
-                using (var mat = new Bitmap(_size.Width, _size.Height, _size.Width*4,
-                                    PixelFormat.Format32bppArgb,userdata))
+                try
                 {
-                    var nfe = new NewFrameEventArgs(mat);
-                    NewFrame.Invoke(this, nfe);
+                    using (var mat = new Bitmap(_size.Width, _size.Height, _size.Width*4,
+                                        PixelFormat.Format32bppArgb,userdata))
+                    {
+                        var nfe = new NewFrameEventArgs(mat);
+                        try
+                        {
+                            NewFrame?.Invoke(this, nfe);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogException(ex, "VLC new frame");
+                        }
+                    }
                 }
-                GC.RemoveMemoryPressure(l);
+                finally
+                {
+                    GC.RemoveMemoryPressure(l);
+                }
                 if (Seekable)
                 {
                     Time = _mediaPlayer.Time;

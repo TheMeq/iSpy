@@ -177,7 +177,7 @@ namespace iSpyApplication.Sources.Audio.streams
                 _stopEvent = new ManualResetEvent(false);
 
                 // create and start new thread
-                _thread = new Thread(WorkerThread) { Name = _source };
+                _thread = new Thread(WorkerThread) { Name = _source, IsBackground = true };
                 _thread.Start();
             }
         }

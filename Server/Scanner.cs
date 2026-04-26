@@ -39,7 +39,7 @@ namespace iSpyApplication.Server
                         IPAddress ipa;
                         if (IPAddress.TryParse(ip, out ipa))
                         {
-                            var scanner = new Thread(p => PortScanner(ports, ipa, manualEvents[k]));
+                            var scanner = new Thread(p => PortScanner(ports, ipa, manualEvents[k])) { IsBackground = true };
                             scanner.Start();
 
                             j = WaitHandle.WaitAny(manualEvents);
@@ -83,7 +83,7 @@ namespace iSpyApplication.Server
                     manualEvents[k].Reset();
                     IPAddress ipa = ip;
 
-                    var scanner = new Thread(p => PortScanner(ports, ipa, manualEvents[k]));
+                    var scanner = new Thread(p => PortScanner(ports, ipa, manualEvents[k])) { IsBackground = true };
                     scanner.Start();
 
                     j = WaitHandle.WaitAny(manualEvents);
