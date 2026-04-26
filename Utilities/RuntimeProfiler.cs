@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 
@@ -17,13 +18,17 @@ namespace iSpyApplication.Utilities
             public long MaxBufferBytes;
             public long LastBufferBytes;
             public long LastDropped;
+            public long LastLoggedDropped;
             public int Recording;
         }
 
         private static readonly ConcurrentDictionary<int, StreamStats> Cameras = new ConcurrentDictionary<int, StreamStats>();
         private static readonly ConcurrentDictionary<int, StreamStats> Microphones = new ConcurrentDictionary<int, StreamStats>();
         private static readonly bool EnabledFlag = string.Equals(Environment.GetEnvironmentVariable("ISPY_PROFILE"), "1", StringComparison.OrdinalIgnoreCase);
+        private static readonly string SessionId = Guid.NewGuid().ToString("N").Substring(0, 8);
+        private static readonly DateTime StartUtc = DateTime.UtcNow;
         private static DateTime _lastLog = DateTime.MinValue;
+        private static int _startupLogged;
         private const int LogIntervalSeconds = 60;
 
         public static bool Enabled => EnabledFlag;
@@ -55,14 +60,25 @@ namespace iSpyApplication.Utilities
 
         public static void LogIfDue(double processCpu, double totalCpu, string counters)
         {
-            if (!EnabledFlag || _lastLog > DateTime.UtcNow.AddSeconds(-LogIntervalSeconds))
+            if (!EnabledFlag)
+                return;
+
+            if (Interlocked.Exchange(ref _startupLogged, 1) == 0)
+            {
+                Logger.LogMessage($"PROFILE startup session={SessionId}, enabled=ISPY_PROFILE=1, appVersion={typeof(MainForm).Assembly.GetName().Version}, bitness={(Environment.Is64BitProcess ? "x64" : "x86")}, os={Environment.OSVersion}, intervalSeconds={LogIntervalSeconds}");
+            }
+
+            if (_lastLog > DateTime.UtcNow.AddSeconds(-LogIntervalSeconds))
                 return;
 
             _lastLog = DateTime.UtcNow;
             var cameraStats = Cameras.OrderBy(p => p.Value.Name).Select(p => FormatStats(p.Key, p.Value));
             var microphoneStats = Microphones.OrderBy(p => p.Value.Name).Select(p => FormatStats(p.Key, p.Value));
+            var process = Process.GetCurrentProcess();
+            var uptime = DateTime.UtcNow - StartUtc;
+            var gcMemoryMb = GC.GetTotalMemory(false) / 1048576;
 
-            Logger.LogMessage($"PROFILE processCpu={processCpu:0.00}, totalCpu={totalCpu:0.00}, {counters}, cameras=[{string.Join("; ", cameraStats)}], microphones=[{string.Join("; ", microphoneStats)}]");
+            Logger.LogMessage($"PROFILE session={SessionId}, uptime={uptime:hh\\:mm\\:ss}, processCpu={processCpu:0.00}, totalCpu={totalCpu:0.00}, {counters}, gcMemoryMb={gcMemoryMb}, gc0={GC.CollectionCount(0)}, gc1={GC.CollectionCount(1)}, gc2={GC.CollectionCount(2)}, threads={process.Threads.Count}, cameras=[{string.Join("; ", cameraStats)}], microphones=[{string.Join("; ", microphoneStats)}]");
         }
 
         private static void RecordFrame(ConcurrentDictionary<int, StreamStats> streams, int id, string name, int bufferCount, long bufferBytes, long dropped, bool recording)
@@ -96,7 +112,9 @@ namespace iSpyApplication.Utilities
             var redraws = Interlocked.Exchange(ref stats.Redraws, 0);
             var maxBuffer = Interlocked.Exchange(ref stats.MaxBuffer, stats.LastBuffer);
             var maxBufferBytes = Interlocked.Exchange(ref stats.MaxBufferBytes, stats.LastBufferBytes);
-            return $"{stats.Name ?? id.ToString()}: frames={frames}, redraws={redraws}, lastBuffer={stats.LastBuffer}, maxBuffer={maxBuffer}, lastBufferBytes={stats.LastBufferBytes}, maxBufferBytes={maxBufferBytes}, dropped={stats.LastDropped}, recording={stats.Recording == 1}";
+            var lastLoggedDropped = Interlocked.Exchange(ref stats.LastLoggedDropped, stats.LastDropped);
+            var droppedDelta = stats.LastDropped - lastLoggedDropped;
+            return $"{stats.Name ?? id.ToString()}#{id}: frames={frames}, redraws={redraws}, lastBuffer={stats.LastBuffer}, maxBuffer={maxBuffer}, lastBufferBytes={stats.LastBufferBytes}, maxBufferBytes={maxBufferBytes}, droppedTotal={stats.LastDropped}, droppedDelta={droppedDelta}, recording={stats.Recording == 1}";
         }
     }
 }

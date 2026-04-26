@@ -1553,6 +1553,7 @@ namespace iSpyApplication.Controls
             _timeLapseWriter = null;
             _writer = null;
             ClearBuffer();
+            Buffer.Dispose();
             _fileListCancellation.Dispose();
             base.Dispose(disposing);
         }
@@ -2001,7 +2002,7 @@ namespace iSpyApplication.Controls
             {
                 var i = _rtindex;
                 _rtindex = Math.Min(i + 1, ReconnectTargets.Length - 1);
-                Logger.LogMessage("Reconnecting " + ObjectName + "  in " + ReconnectTargets[i] + "s");
+                Logger.LogMessage($"Camera reconnect scheduled id={Camobject.id}, name={ObjectName}, source={SourceType}, delaySeconds={ReconnectTargets[i]}, retryIndex={i}");
                 return ReconnectTargets[i];
             }
         }
@@ -2013,6 +2014,7 @@ namespace iSpyApplication.Controls
                 var s = Camera?.VideoSource;
                 if (s != null && !s.IsRunning)
                 {
+                    Logger.LogMessage($"Camera reconnect starting id={Camobject.id}, name={ObjectName}, source={SourceType}, reason={VideoSourceErrorMessage}, retryCount={_reconnectFailCount}");
                     Calibrating = true;
                     s.Start();
                     return true;
@@ -2033,6 +2035,7 @@ namespace iSpyApplication.Controls
                     if ((DateTime.UtcNow - _lastReconnect).TotalSeconds > Camobject.settings.reconnectinterval)
                     {
                         _lastReconnect = DateTime.UtcNow;
+                        Logger.LogMessage($"Camera interval reconnect id={Camobject.id}, name={ObjectName}, source={SourceType}, intervalSeconds={Camobject.settings.reconnectinterval}");
                         CameraReconnect?.Invoke(this, EventArgs.Empty);
 
                         try
@@ -3318,21 +3321,33 @@ namespace iSpyApplication.Controls
                            
                             Helper.FrameAction peakFrame = null;
                             bool _writtenVideo = false;
-                            while (!_stopWrite.WaitOne(5))
+                            var waitHandles = bAudio
+                                ? new[] { _stopWrite, Buffer.AvailableWaitHandle, vc.Buffer.AvailableWaitHandle }
+                                : new[] { _stopWrite, Buffer.AvailableWaitHandle };
+                            while (true)
                             {
+                                var wroteFrame = false;
                                 if (Buffer.TryDequeue(out fa))
                                 {
                                     WriteFrame(fa, ref maxAlarm, ref peakFrame);
                                     _writtenVideo = true;
+                                    wroteFrame = true;
                                 }
 
                                 if (bAudio && _writtenVideo)
                                 {
-                                    if (vc.Buffer.TryDequeue(out fa))
+                                    while (vc.Buffer.TryDequeue(out fa))
                                     {
                                         WriteFrame(fa, ref maxAlarm, ref peakFrame);
+                                        wroteFrame = true;
                                     }
                                 }
+
+                                if (_stopWrite.WaitOne(0))
+                                    break;
+
+                                if (!wroteFrame && WaitHandle.WaitAny(waitHandles, 250) == 0)
+                                    break;
                             }
 
                             if (!Directory.Exists(folder + @"thumbs\"))
@@ -4133,7 +4148,9 @@ namespace iSpyApplication.Controls
         private void SetErrorState(string reason)
         {
             VideoSourceErrorMessage = reason;
-            _reconnectTarget = DateTime.UtcNow.AddSeconds(NextReconnectTarget);
+            var reconnectDelay = NextReconnectTarget;
+            _reconnectTarget = DateTime.UtcNow.AddSeconds(reconnectDelay);
+            Logger.LogMessage($"Camera source error id={Camobject.id}, name={ObjectName}, source={SourceType}, reason={reason}, reconnectDelaySeconds={reconnectDelay}, retryCount={_reconnectFailCount}");
             if (!VideoSourceErrorState)
             {
                 VideoSourceErrorState = true;

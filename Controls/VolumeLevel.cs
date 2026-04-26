@@ -1191,6 +1191,7 @@ namespace iSpyApplication.Controls
                     if ((DateTime.UtcNow - _lastReconnect).TotalSeconds > Micobject.settings.reconnectinterval)
                     {
                         _lastReconnect = DateTime.UtcNow;
+                        Logger.LogMessage($"Microphone interval reconnect id={Micobject.id}, name={ObjectName}, source={SourceType}, intervalSeconds={Micobject.settings.reconnectinterval}");
                         try
                         {
                             AudioSource.Restart();
@@ -1392,7 +1393,8 @@ namespace iSpyApplication.Controls
                     {
                         //try to reconnect every 10 seconds
                         if (!AudioSource.IsRunning)
-                        {  
+                        {
+                            Logger.LogMessage($"Microphone reconnect starting id={Micobject.id}, name={ObjectName}, source={SourceType}, reason={AudioSourceErrorMessage}, retryCount={_reconnectFailCount}");
                             AudioSource.Start();
                         }
                         _reconnectTime = Helper.Now;
@@ -1687,10 +1689,11 @@ namespace iSpyApplication.Controls
 
                         try
                         {
-                            while (!_stopWrite.WaitOne(50))
+                            var waitHandles = new[] { _stopWrite, Buffer.AvailableWaitHandle };
+                            while (true)
                             {
-                                
-                                if (Buffer.TryDequeue(out fa))
+                                var wroteFrame = false;
+                                while (Buffer.TryDequeue(out fa))
                                 {
                                     try
                                     {
@@ -1703,6 +1706,7 @@ namespace iSpyApplication.Controls
                                             _soundData.Append(",");
                                             if (d > maxlevel)
                                                 maxlevel = d;
+                                            wroteFrame = true;
                                         }
                                     }
                                     finally
@@ -1710,8 +1714,12 @@ namespace iSpyApplication.Controls
                                         fa.Dispose();
                                     }
                                 }
-                                else
-                                    Thread.Yield();
+
+                                if (_stopWrite.WaitOne(0))
+                                    break;
+
+                                if (!wroteFrame && WaitHandle.WaitAny(waitHandles, 500) == 0)
+                                    break;
                             }
 
 
@@ -1844,6 +1852,7 @@ namespace iSpyApplication.Controls
             _stopWrite.Close();
             _vline.Dispose();
             ClearBuffer();
+            Buffer.Dispose();
             _fileListCancellation.Dispose();
             base.Dispose(disposing);
             _disposed = true;
@@ -2679,6 +2688,7 @@ namespace iSpyApplication.Controls
         private void SetErrorState(string reason)
         {
             AudioSourceErrorMessage = reason;
+            Logger.LogMessage($"Microphone source error id={Micobject.id}, name={ObjectName}, source={SourceType}, reason={reason}, reconnectDelaySeconds=10, retryCount={_reconnectFailCount}");
             if (!AudioSourceErrorState)
             {
                 AudioSourceErrorState = true;

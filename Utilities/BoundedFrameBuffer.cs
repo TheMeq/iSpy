@@ -4,9 +4,10 @@ using System.Threading;
 
 namespace iSpyApplication.Utilities
 {
-    internal sealed class BoundedFrameBuffer
+    internal sealed class BoundedFrameBuffer : IDisposable
     {
         private readonly ConcurrentQueue<Helper.FrameAction> _queue = new ConcurrentQueue<Helper.FrameAction>();
+        private readonly AutoResetEvent _available = new AutoResetEvent(false);
         private int _count;
         private long _bytes;
         private long _dropped;
@@ -14,6 +15,7 @@ namespace iSpyApplication.Utilities
         public int Count => Volatile.Read(ref _count);
         public long Bytes => Interlocked.Read(ref _bytes);
         public long Dropped => Interlocked.Read(ref _dropped);
+        public WaitHandle AvailableWaitHandle => _available;
 
         public bool TryPeek(out Helper.FrameAction frameAction)
         {
@@ -27,6 +29,8 @@ namespace iSpyApplication.Utilities
 
             Interlocked.Decrement(ref _count);
             Interlocked.Add(ref _bytes, -GetApproximateBytes(frameAction));
+            if (Count > 0)
+                _available.Set();
             return true;
         }
 
@@ -35,6 +39,7 @@ namespace iSpyApplication.Utilities
             _queue.Enqueue(frameAction);
             Interlocked.Increment(ref _count);
             Interlocked.Add(ref _bytes, GetApproximateBytes(frameAction));
+            _available.Set();
             Trim(keepAfter, maxItems, maxBytes);
         }
 
@@ -58,6 +63,13 @@ namespace iSpyApplication.Utilities
             {
                 frameAction.Dispose();
             }
+            _available.Reset();
+        }
+
+        public void Dispose()
+        {
+            Clear();
+            _available.Dispose();
         }
 
         private bool ShouldDropNext(DateTime? keepAfter, int maxItems, long maxBytes)
