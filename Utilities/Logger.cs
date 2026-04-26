@@ -12,6 +12,7 @@ namespace iSpyApplication.Utilities
     {
         public static string NextLog = "";
         private static bool _logging;
+        private static readonly object LogLock = new object();
         private static StringBuilder _logFile = new StringBuilder();
         private static string _lastlog = "";
         private static string _lastPluginLog = "";
@@ -37,8 +38,11 @@ namespace iSpyApplication.Utilities
             {
                 string em = ex.HelpLink + "<br/>" + ex.Message + "<br/>" + ex.Source + "<br/>" + ex.StackTrace +
                             "<br/>" + ex.InnerException + "<br/>" + ex.Data;
-                _logFile.Append("<tr><td style=\"color:red\" valign=\"top\">Exception:</td><td valign=\"top\">" +
-                               DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + em + "</td></tr>");
+                lock (LogLock)
+                {
+                    _logFile.Append("<tr><td style=\"color:red\" valign=\"top\">Exception:</td><td valign=\"top\">" +
+                                   DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + em + "</td></tr>");
+                }
             }
             catch
             {
@@ -56,8 +60,11 @@ namespace iSpyApplication.Utilities
 
             try
             {
-                _logFile.Append("<tr><td style=\"color:green\" valign=\"top\">Message</td><td valign=\"top\">" +
-                               DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + message + "</td></tr>");
+                lock (LogLock)
+                {
+                    _logFile.Append("<tr><td style=\"color:green\" valign=\"top\">Message</td><td valign=\"top\">" +
+                                   DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + message + "</td></tr>");
+                }
             }
             catch
             {
@@ -68,7 +75,10 @@ namespace iSpyApplication.Utilities
         internal static void LogPluginToFile(string name, int id, string action, string detail)
         {
             DateTime dt = Helper.Now;
-            PluginLogFile.Append("<message name=\"" + name + "\" id=\"" + id + "\" action=\"" + action + "\" timestamp=\"" + dt.Ticks + "\">" + detail.Replace("&", "&amp;") + "</message>");
+            lock (LogLock)
+            {
+                PluginLogFile.Append("<message name=\"" + name + "\" id=\"" + id + "\" action=\"" + action + "\" timestamp=\"" + dt.Ticks + "\">" + detail.Replace("&", "&amp;") + "</message>");
+            }
         }
 
         internal static void LogError(String message)
@@ -78,8 +88,11 @@ namespace iSpyApplication.Utilities
 
             try
             {
-                _logFile.Append("<tr><td style=\"color:red\" valign=\"top\">Error</td><td valign=\"top\">" +
-                               DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + message + "</td></tr>");
+                lock (LogLock)
+                {
+                    _logFile.Append("<tr><td style=\"color:red\" valign=\"top\">Error</td><td valign=\"top\">" +
+                                   DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + message + "</td></tr>");
+                }
             }
             catch
             {
@@ -93,8 +106,11 @@ namespace iSpyApplication.Utilities
 
             try
             {
-                _logFile.Append("<tr><td style=\"color:red\" valign=\"top\">Error</td><td valign=\"top\">" +
-                               DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + message + ", " + message2 + "</td></tr>");
+                lock (LogLock)
+                {
+                    _logFile.Append("<tr><td style=\"color:red\" valign=\"top\">Error</td><td valign=\"top\">" +
+                                   DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + message + ", " + message2 + "</td></tr>");
+                }
                 Console.WriteLine(message + ", " + message2);
             }
             catch
@@ -110,8 +126,11 @@ namespace iSpyApplication.Utilities
 
             try
             {
-                _logFile.Append("<tr><td style=\"color:orange\" valign=\"top\">Warning</td><td valign=\"top\">" +
-                               DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + message + "</td></tr>");
+                lock (LogLock)
+                {
+                    _logFile.Append("<tr><td style=\"color:orange\" valign=\"top\">Warning</td><td valign=\"top\">" +
+                                   DateTime.Now.ToLongTimeString() + "</td><td valign=\"top\">" + message + "</td></tr>");
+                }
             }
             catch
             {
@@ -129,7 +148,10 @@ namespace iSpyApplication.Utilities
                 //start new log
                 _logging = true;
                 _logStartDateTime = DateTime.Now;
-                _logFile = new StringBuilder();
+                lock (LogLock)
+                {
+                    _logFile = new StringBuilder();
+                }
                 InitLogging(false);
                 return;
             }
@@ -137,19 +159,26 @@ namespace iSpyApplication.Utilities
             {
                 try
                 {
-                    if (_logFile.Length > MainForm.Conf.Logging.FileSize * 1024)
+                    string logSnapshot;
+                    lock (LogLock)
                     {
-                        _logFile.Append("<tr><td style=\"color:red\" valign=\"top\">Logging Exiting</td><td valign=\"top\">" +
-                            DateTime.Now.ToLongTimeString() +
-                            "</td><td valign=\"top\">Logging is being disabled as it has reached the maximum size (" +
-                            MainForm.Conf.Logging.FileSize + "kb).</td></tr>");
-                        _logging = false;
+                        if (_logFile.Length > MainForm.Conf.Logging.FileSize * 1024)
+                        {
+                            _logFile.Append("<tr><td style=\"color:red\" valign=\"top\">Logging Exiting</td><td valign=\"top\">" +
+                                DateTime.Now.ToLongTimeString() +
+                                "</td><td valign=\"top\">Logging is being disabled as it has reached the maximum size (" +
+                                MainForm.Conf.Logging.FileSize + "kb).</td></tr>");
+                            _logging = false;
+                        }
+
+                        logSnapshot = _logFile.ToString();
                     }
-                    if (_lastlog.Length != _logFile.Length)
+
+                    if (_lastlog.Length != logSnapshot.Length)
                     {
                         string logTemplate = "<html><head><title>iSpy v" + Application.ProductVersion + " Log File</title><style type=\"text/css\">body,td,th,div {font-family:Verdana;font-size:10px}</style></head><body><h1>" + MainForm.Conf.ServerName + ": Log Start (v" + Application.
                                                                                                           ProductVersion + " Platform: " + Program.Platform + "): " + _logStartDateTime + "</h1><p><table cellpadding=\"2px\"><!--CONTENT--></table></p></body></html>";
-                        _lastlog = _logFile.ToString();
+                        _lastlog = logSnapshot;
                         string fc = logTemplate.Replace("<!--CONTENT-->", _lastlog);
                         File.WriteAllText(Program.AppDataPath + @"log_" + NextLog + ".htm", fc);
                     }
@@ -163,11 +192,17 @@ namespace iSpyApplication.Utilities
 
             try
             {
-                if (_lastPluginLog.Length != PluginLogFile.Length)
+                string pluginLogSnapshot;
+                lock (LogLock)
                 {
-                    string fc = PluginLogTemplate.Replace("<!--CONTENT-->", PluginLogFile.ToString());
+                    pluginLogSnapshot = PluginLogFile.ToString();
+                }
+
+                if (_lastPluginLog.Length != pluginLogSnapshot.Length)
+                {
+                    string fc = PluginLogTemplate.Replace("<!--CONTENT-->", pluginLogSnapshot);
                     File.WriteAllText(Program.AppDataPath + @"plugin_log_" + NextLog + ".xml", fc);
-                    _lastPluginLog = PluginLogFile.ToString();
+                    _lastPluginLog = pluginLogSnapshot;
                 }
             }
             catch (Exception)

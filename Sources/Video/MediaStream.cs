@@ -291,7 +291,11 @@ namespace iSpyApplication.Sources.Video
             string prefix="";
             if (_inputFormat == null)
             {
-                prefix = vss.ToLower().Substring(0, vss.IndexOf(":", StringComparison.Ordinal));
+                var schemeIndex = vss.IndexOf(":", StringComparison.Ordinal);
+                if (schemeIndex <= 0)
+                    throw new ApplicationException("Invalid video source URI.");
+
+                prefix = vss.Substring(0, schemeIndex).ToLowerInvariant();
                 ffmpeg.av_dict_set_int(&options, "rw_timeout", _timeoutMicroSeconds, 0);
                 ffmpeg.av_dict_set_int(&options, "tcp_nodelay", 1, 0);
                 switch (prefix)
@@ -401,7 +405,7 @@ namespace iSpyApplication.Sources.Video
                             }
                             break;
                     }
-                    throw ex;
+                    throw;
                 }
                 _formatContext = pFormatContext;
 
@@ -548,7 +552,7 @@ namespace iSpyApplication.Sources.Video
             _lastPacket = DateTime.UtcNow;
             if (_abort) throw new Exception("Connect aborted");
 
-            _thread = new Thread(ReadFrames) {Name = Source, IsBackground = false};
+            _thread = new Thread(ReadFrames) {Name = Source, IsBackground = true};
             _thread.Start();
         }
 
@@ -569,6 +573,31 @@ namespace iSpyApplication.Sources.Video
 
         [HandleProcessCorruptedStateExceptions]
         private void ReadFrames()
+        {
+            try
+            {
+                ReadFramesUnsafe();
+            }
+            catch (ThreadAbortException)
+            {
+                _res = ReasonToFinishPlaying.StoppedByUser;
+            }
+            catch (Exception ex)
+            {
+                if (!_abort)
+                    _res = ReasonToFinishPlaying.VideoSourceError;
+                Logger.LogException(ex, SourceName + ": Media Stream (read)");
+            }
+            finally
+            {
+                SafeRaiseNewFrame(new NewFrameEventArgs(null));
+                _clock?.Dispose();
+                _clock = null;
+                CleanUp();
+            }
+        }
+
+        private void ReadFramesUnsafe()
         {
             pConvertedFrameBuffer = IntPtr.Zero;
             pConvertContext = null;
@@ -763,7 +792,7 @@ namespace iSpyApplication.Sources.Video
                                     PixelFormat.Format24bppRgb, pConvertedFrameBuffer))
                             {
                                 var nfe = new NewFrameEventArgs(mat);
-                                nf.Invoke(this, nfe);
+                                SafeRaiseNewFrame(nfe);
                             }
 
                             _lastVideoFrame = DateTime.UtcNow;
@@ -785,11 +814,6 @@ namespace iSpyApplication.Sources.Video
 
                 ffmpeg.av_packet_unref(&packet);
             } while (!_abort && !MainForm.ShuttingDown);
-
-            NewFrame?.Invoke(this, new NewFrameEventArgs(null));
-            _clock?.Dispose();
-            _clock = null;
-            CleanUp();
         }
 
         private static AVPixelFormat NormalizePixelFormat(AVPixelFormat fmt)
@@ -891,8 +915,44 @@ namespace iSpyApplication.Sources.Video
                 }
             }
 
-            PlayingFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
-            AudioFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
+            SafeRaisePlayingFinished();
+            SafeRaiseAudioFinished();
+        }
+
+        private void SafeRaiseNewFrame(NewFrameEventArgs args)
+        {
+            try
+            {
+                NewFrame?.Invoke(this, args);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, SourceName + ": Media Stream (new frame)");
+            }
+        }
+
+        private void SafeRaisePlayingFinished()
+        {
+            try
+            {
+                PlayingFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, SourceName + ": Media Stream (finished)");
+            }
+        }
+
+        private void SafeRaiseAudioFinished()
+        {
+            try
+            {
+                AudioFinished?.Invoke(this, new PlayingFinishedEventArgs(_res));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex, SourceName + ": Media Stream (audio finished)");
+            }
         }
 
         
