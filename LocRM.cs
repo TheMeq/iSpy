@@ -56,29 +56,37 @@ namespace iSpyApplication
 
         public static string GetString(string identifier, string languageCode)
         {
+            if (string.IsNullOrWhiteSpace(identifier))
+                return string.Empty;
+
             if (!_inited)
             {
                 Init();
             }
+
             identifier = identifier.ToLower();
+            languageCode = string.IsNullOrWhiteSpace(languageCode) ? "en" : languageCode.ToLower();
+            var key = languageCode + "." + identifier;
+            var value = Res[key] as string;
+            if (value != null)
+                return value;
+
+            if (languageCode != "en")
+            {
+                value = Res["en." + identifier] as string;
+                if (value != null)
+                    return value;
+            }
+
             try
             {
-                return Res[languageCode+"."+identifier.ToLower()].ToString();
-            }
-            catch (NullReferenceException)
-            {
                 Logger.LogError("No Translation for token " + identifier);
-                if (MainForm.Conf.Language != "en")
-                {
-                    Res.Add(languageCode+"."+identifier, identifier);
-                    return identifier;
-                }
-
             }
             catch
             {
-                //possible threading error where language is reset
+                // Logging can be unavailable during early startup.
             }
+
             return identifier;
         }
 
