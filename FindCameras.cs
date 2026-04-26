@@ -422,7 +422,7 @@ namespace iSpyApplication
             if (button1.Text == LocRm.GetString("ScanLocalNetwork"))
             {
                 button1.Text = LocRm.GetString("Cancel");
-                Application.DoEvents();
+                button1.Refresh();
                 ScanNetwork();
             }
             else
@@ -681,7 +681,7 @@ namespace iSpyApplication
         {
             _exiting = true;
             _scanner.Stop();
-            Application.DoEvents();
+            Refresh();
         }
 
         private void btnNext_Click(object sender, EventArgs e)

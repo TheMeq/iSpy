@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -84,6 +83,7 @@ namespace iSpyApplication.Controls
 
         private List<FilesFile> _filelist = new List<FilesFile>();
         private Thread _recordingThread;
+        private readonly CancellationTokenSource _fileListCancellation = new CancellationTokenSource();
         private bool _requestRefresh;
         private readonly Pen _vline = new Pen(Color.Green, 2);
         private readonly object _lockobject = new object();
@@ -144,7 +144,9 @@ namespace iSpyApplication.Controls
         public event Delegates.FileListUpdatedEventHandler FileListUpdated;
         #endregion
 
-        internal ConcurrentQueue<Helper.FrameAction> Buffer = new ConcurrentQueue<Helper.FrameAction>();
+        private const int MaxBufferedAudioFrames = 3000;
+        private const long MaxBufferedAudioBytes = 64L * 1024 * 1024;
+        internal BoundedFrameBuffer Buffer = new BoundedFrameBuffer();
 
         public bool Alerted;
         public string AudioFileName = "";
@@ -173,7 +175,7 @@ namespace iSpyApplication.Controls
             {
                 if (_tFiles == null || _tFiles.Join(TimeSpan.Zero))
                 {
-                    _tFiles = new Thread(GenerateFileList) { IsBackground = true };
+                    _tFiles = new Thread(() => GenerateFileList(_fileListCancellation.Token)) { IsBackground = true };
                     _tFiles.Start();
                 }
             }
@@ -184,6 +186,11 @@ namespace iSpyApplication.Controls
         }
 
         internal void GenerateFileList()
+        {
+            GenerateFileList(_fileListCancellation.Token);
+        }
+
+        private void GenerateFileList(CancellationToken cancellationToken)
         {
             string dir = Dir.Entry + "audio\\" +Micobject.directory + "\\";
             if (!Directory.Exists(dir))
@@ -203,6 +210,9 @@ namespace iSpyApplication.Controls
             bool failed = false;
             if (File.Exists(dir + "data.xml"))
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
                 var s = new XmlSerializer(typeof(Files));
                 try
                 {
@@ -210,6 +220,9 @@ namespace iSpyApplication.Controls
                     {
                         try
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                                return;
+
                             using (TextReader reader = new StreamReader(fs))
                             {
                                 fs.Position = 0;
@@ -225,6 +238,9 @@ namespace iSpyApplication.Controls
                                 }
                                 reader.Close();
                             }
+                            if (cancellationToken.IsCancellationRequested)
+                                return;
+
                             ScanForMissingFiles();
                         }
                         catch (Exception ex)
@@ -250,6 +266,8 @@ namespace iSpyApplication.Controls
             }
 
             //else build from directory contents
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
             _filelist = new List<FilesFile>();
             lock (_lockobject)
@@ -264,6 +282,9 @@ namespace iSpyApplication.Controls
                 //sanity check existing data
                 foreach (FileInfo fi in lFi)
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
+
                     FileInfo fi1 = fi;
                     if (_filelist.Count(p => p.Filename == fi1.Name) == 0)
                     {
@@ -282,6 +303,9 @@ namespace iSpyApplication.Controls
                 }
                 for (int index = 0; index < _filelist.Count; index++)
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
+
                     FilesFile ff = _filelist[index];
                     if (lFi.All(p => p.Name != ff.Filename))
                     {
@@ -291,6 +315,9 @@ namespace iSpyApplication.Controls
                 }
                 _filelist = _filelist.OrderByDescending(p => p.CreatedDateTicks).ToList();
             }
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
             FileListUpdated?.Invoke(this);
         }
         //public List<FilesFile> FileList
@@ -354,7 +381,7 @@ namespace iSpyApplication.Controls
             {
                 if (_tScan == null || _tScan.Join(TimeSpan.Zero))
                 {
-                    _tScan = new Thread(ScanFiles) { IsBackground = true };
+                    _tScan = new Thread(() => ScanFiles(_fileListCancellation.Token)) { IsBackground = true };
                     _tScan.Start();
                 }
             }
@@ -365,8 +392,16 @@ namespace iSpyApplication.Controls
 
         private void ScanFiles()
         {
+            ScanFiles(_fileListCancellation.Token);
+        }
+
+        private void ScanFiles(CancellationToken cancellationToken)
+        {
             try
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
                 //check files exist
                 var dirinfo = new DirectoryInfo(Dir.Entry + "audio\\" + Micobject.directory + "\\");
 
@@ -380,6 +415,9 @@ namespace iSpyApplication.Controls
                 {
                     for (int j = 0; j < _filelist.Count; j++)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                            return;
+
                         var t = _filelist[j];
                         if (t != null)
                         {
@@ -397,6 +435,9 @@ namespace iSpyApplication.Controls
                     //add missing files
                     foreach (var fi in lFi)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                            return;
+
                         _filelist.Add(new FilesFile
                                             {
                                                 CreatedDateTicks = fi.CreationTime.Ticks,
@@ -415,6 +456,9 @@ namespace iSpyApplication.Controls
             {
                 ErrorHandler?.Invoke(ex.Message);
             }
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
             FileListUpdated?.Invoke(this);
         }
 
@@ -1783,7 +1827,8 @@ namespace iSpyApplication.Controls
                 return;
             if (disposing)
             {
-                Invalidate();              
+                Invalidate();
+                _fileListCancellation.Cancel();
             }
             if (WaveOut != null)
             {
@@ -1799,20 +1844,15 @@ namespace iSpyApplication.Controls
             _stopWrite.Close();
             _vline.Dispose();
             ClearBuffer();
+            _fileListCancellation.Dispose();
             base.Dispose(disposing);
             _disposed = true;
         }
-
         public void ClearBuffer()
         {
             lock (_lockobject)
             {
-                Helper.FrameAction fa;
-                while (Buffer.TryDequeue(out fa))
-                {
-                    fa.Dispose();
-                }
-                Buffer = new ConcurrentQueue<Helper.FrameAction>();
+                Buffer.Clear();
             }
         }
 
@@ -2217,28 +2257,14 @@ namespace iSpyApplication.Controls
                 lock (_lockobject)
                 {                   
                     Helper.FrameAction fa;
+                    var dt = Helper.Now.AddSeconds(0 - Micobject.settings.buffer);
                     if (!Recording)
                     {
-                        var dt = Helper.Now.AddSeconds(0 - Micobject.settings.buffer);
-                        while (Buffer.Count > 0)
-                        {
-                            if (Buffer.TryPeek(out fa))
-                            {
-                                if (fa.TimeStamp < dt)
-                                {
-                                    if (Buffer.TryDequeue(out fa))
-                                        fa.Dispose();
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
-                        }
+                        Buffer.Trim(dt, MaxBufferedAudioFrames, MaxBufferedAudioBytes);
                     }
                     fa = new Helper.FrameAction(bResampled, totBytes, Levels.Max(), Helper.Now);
-                    Buffer.Enqueue(fa);
-                    
+                    Buffer.Enqueue(fa, Recording ? (DateTime?) null : dt, MaxBufferedAudioFrames, MaxBufferedAudioBytes);
+                    RuntimeProfiler.RecordMicrophoneFrame(Micobject.id, Micobject.name, Buffer.Count, Buffer.Bytes, Buffer.Dropped, Recording);
                 }
 
                 if (Micobject.settings.needsupdate)

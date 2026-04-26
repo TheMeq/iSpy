@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -62,11 +61,14 @@ namespace iSpyApplication.Controls
         private double _timeLapseFrameCount;
         private double _secondCountNew;
         private Point _mouseLoc;
-        public ConcurrentQueue<Helper.FrameAction> Buffer = new ConcurrentQueue<Helper.FrameAction>();
+        private const int MaxBufferedVideoFrames = 900;
+        private const long MaxBufferedVideoBytes = 200L * 1024 * 1024;
+        internal BoundedFrameBuffer Buffer = new BoundedFrameBuffer();
         private DateTime _errorTime = DateTime.MinValue;
         private DateTime _reconnectTarget = DateTime.MinValue;
         private bool _firstFrame = true;
         private Thread _recordingThread;
+        private readonly CancellationTokenSource _fileListCancellation = new CancellationTokenSource();
         private Camera _camera;
         private DateTime _lastFrameUploaded = Helper.Now;
         private DateTime _lastFrameSaved = Helper.Now;
@@ -395,6 +397,11 @@ namespace iSpyApplication.Controls
 
         internal void GenerateFileList()
         {
+            GenerateFileList(_fileListCancellation.Token);
+        }
+
+        private void GenerateFileList(CancellationToken cancellationToken)
+        {
             string dir = Dir.Entry + "video\\" +
                          Camobject.directory + "\\";
 
@@ -416,6 +423,9 @@ namespace iSpyApplication.Controls
             bool failed = false;
             if (File.Exists(dir + "data.xml"))
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
                 var s = new XmlSerializer(typeof(Files));
                 try
                 {
@@ -423,6 +433,9 @@ namespace iSpyApplication.Controls
                     {
                         try
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                                return;
+
                             using (TextReader reader = new StreamReader(fs))
                             {
                                 fs.Position = 0;
@@ -438,6 +451,9 @@ namespace iSpyApplication.Controls
                                 }
                                 reader.Close();
                             }
+                            if (cancellationToken.IsCancellationRequested)
+                                return;
+
                             ScanForMissingFiles();
                         }
                         catch (Exception ex)
@@ -462,6 +478,9 @@ namespace iSpyApplication.Controls
             }
 
             //else build from directory contents
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
             _filelist = new List<FilesFile>();
             lock (_lockobject)
             {
@@ -477,6 +496,9 @@ namespace iSpyApplication.Controls
 
                 foreach (FileInfo fi in lFi)
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
+
                     FileInfo fi1 = fi;
                     if (_filelist.Count(p => p.Filename == fi1.Name) == 0)
                     {
@@ -497,6 +519,9 @@ namespace iSpyApplication.Controls
 
                 for (int index = 0; index < _filelist.Count; index++)
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                        return;
+
                     FilesFile ff = _filelist[index];
                     if (ff != null && lFi.All(p => p.Name != ff.Filename))
                     {
@@ -508,6 +533,9 @@ namespace iSpyApplication.Controls
                 }
                 _filelist = _filelist.OrderByDescending(p => p.CreatedDateTicks).ToList();
             }
+
+            if (cancellationToken.IsCancellationRequested)
+                return;
 
             FileListUpdated?.Invoke(this);
         }
@@ -567,7 +595,7 @@ namespace iSpyApplication.Controls
             {
                 if (_tScan == null || _tScan.Join(TimeSpan.Zero))
                 {
-                    _tScan = new Thread(ScanFiles) { IsBackground = true };
+                    _tScan = new Thread(() => ScanFiles(_fileListCancellation.Token)) { IsBackground = true };
                     _tScan.Start();
                 }
             }
@@ -578,8 +606,16 @@ namespace iSpyApplication.Controls
 
         private void ScanFiles()
         {
+            ScanFiles(_fileListCancellation.Token);
+        }
+
+        private void ScanFiles(CancellationToken cancellationToken)
+        {
             try
             {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
                 //check files exist
                 var dir = Dir.Entry + "video\\" +
                                                   Camobject.directory + "\\";
@@ -595,6 +631,9 @@ namespace iSpyApplication.Controls
                 {
                     for (int j = 0; j < _filelist.Count; j++)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                            return;
+
                         var t = _filelist[j];
                         if (t != null)
                         {
@@ -612,6 +651,9 @@ namespace iSpyApplication.Controls
                     //add missing files
                     foreach (var fi in lFi)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                            return;
+
                         _filelist.Add(new FilesFile
                         {
                             CreatedDateTicks = fi.CreationTime.Ticks,
@@ -630,6 +672,9 @@ namespace iSpyApplication.Controls
             {
                 ErrorHandler?.Invoke(ex.Message);
             }
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
             FileListUpdated?.Invoke(this);
         }
         #endregion
@@ -700,7 +745,7 @@ namespace iSpyApplication.Controls
             {
                 if (_tFiles == null || _tFiles.Join(TimeSpan.Zero))
                 {
-                    _tFiles = new Thread(GenerateFileList) { IsBackground = true };
+                    _tFiles = new Thread(() => GenerateFileList(_fileListCancellation.Token)) { IsBackground = true };
                     _tFiles.Start();
                 }
             }
@@ -1489,6 +1534,7 @@ namespace iSpyApplication.Controls
             if (disposing)
             {
                 Invalidate();
+                _fileListCancellation.Cancel();
             }
             LocationChanged -= CameraWindowLocationChanged;
             Resize-=CameraWindowResize;
@@ -1507,6 +1553,7 @@ namespace iSpyApplication.Controls
             _timeLapseWriter = null;
             _writer = null;
             ClearBuffer();
+            _fileListCancellation.Dispose();
             base.Dispose(disposing);
         }
 
@@ -3029,29 +3076,12 @@ namespace iSpyApplication.Controls
                 }             
                     
                 var dt = Helper.Now.AddSeconds(0 - Camobject.recorder.bufferseconds);
-                    
-                if (!Recording) { 
-                while (Buffer.Count > 0)
-                {
-                    Helper.FrameAction fa;
-                    if (Buffer.TryPeek(out fa))
-                    {
-                        if (fa.TimeStamp < dt)
-                        {
-                            if (Buffer.TryDequeue(out fa))
-                                fa.Dispose();
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }}
 
-                
-                
+                if (!Recording)
+                    Buffer.Trim(dt, MaxBufferedVideoFrames, MaxBufferedVideoBytes);
+
                 if (Camobject.recorder.bufferseconds > 0 || Recording)
-                    Buffer.Enqueue(new Helper.FrameAction(e.Frame, Camera.MotionLevel, Helper.Now));
+                    Buffer.Enqueue(new Helper.FrameAction(e.Frame, Camera.MotionLevel, Helper.Now), Recording ? (DateTime?) null : dt, MaxBufferedVideoFrames, MaxBufferedVideoBytes);
                 //EnqueueAsync.BeginInvoke(Buffer, new Bitmap(e.Frame), Camera.MotionLevel, Helper.Now, null,null);
                 //else
                 //{
@@ -3070,7 +3100,7 @@ namespace iSpyApplication.Controls
                     RuntimeProfiler.RecordCameraRedraw(Camobject.id);
                 }
 
-                RuntimeProfiler.RecordCameraFrame(Camobject.id, Camobject.name, Buffer.Count, Recording);
+                RuntimeProfiler.RecordCameraFrame(Camobject.id, Camobject.name, Buffer.Count, Buffer.Bytes, Buffer.Dropped, Recording);
                 
 
                 if (_reconnectTarget != DateTime.MinValue)
@@ -3094,13 +3124,6 @@ namespace iSpyApplication.Controls
                 ErrorHandler?.Invoke(ex.Message);
             }
         }
-
-        private static readonly EnqueueAsyncDelegate EnqueueAsync = (q, b, f, d) => {
-                                                               q.Enqueue(new Helper.FrameAction(b, f, d));
-                                                               b.Dispose();
-                                                           };
-
-        private delegate void EnqueueAsyncDelegate(ConcurrentQueue<Helper.FrameAction> buffer, Bitmap frame, float motionLevel, DateTime frameTime);
 
         public event NewFrameEventHandler NewFrame;
 

@@ -109,7 +109,7 @@ namespace iSpyApplication
                             NL);
             
             UISync.Execute(() => rtbOutput.Text += "Checking local server... ");
-            Application.DoEvents();
+            rtbOutput.Refresh();
             string res = "";
             if (!loadurl(localserver, out res))
             {
@@ -142,7 +142,7 @@ namespace iSpyApplication
             }
             UISync.Execute(() => rtbOutput.Text += NL);
             UISync.Execute(() => rtbOutput.Text += "Checking WebServer... ");
-            Application.DoEvents();
+            rtbOutput.Refresh();
             if (!loadurl(MainForm.Webserver + "/webservices/ispyapi.asmx", out res))
             {
                 UISync.Execute(() => rtbOutput.Text += "Webservices not responding.");
@@ -156,7 +156,7 @@ namespace iSpyApplication
             }
             UISync.Execute(() => rtbOutput.Text += NL);
             UISync.Execute(() => rtbOutput.Text += "Checking your firewall... ");
-            Application.DoEvents();
+            rtbOutput.Refresh();
             try
             {
                 var fw = new FireWall();
@@ -384,8 +384,11 @@ namespace iSpyApplication
 
             }
             UISync.Execute(() => rtbOutput.Text+=NL);
-            Application.DoEvents();
-            UISync.Execute(() => button2.Enabled = true);
+            UISync.Execute(() =>
+            {
+                rtbOutput.Refresh();
+                button2.Enabled = true;
+            });
         }
 
         private void rtbOutput_LinkClicked(object sender, LinkClickedEventArgs e)

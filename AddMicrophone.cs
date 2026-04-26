@@ -39,7 +39,7 @@ namespace iSpyApplication
             {
                 chkActive.Enabled = true;
                 chkActive.Checked = false;
-                Application.DoEvents();
+                chkActive.Refresh();
                 VolumeLevel.Micobject.settings.needsupdate = true;
                 lblAudioSource.Text = VolumeLevel.Micobject.settings.sourcename;
                 chkActive.Checked = true;
@@ -724,7 +724,7 @@ namespace iSpyApplication
                     {
                         listen = true;
                         VolumeLevel.Listening = false;
-                        Application.DoEvents();
+                        Refresh();
                     }
                 }
                 VolumeLevel.WaveOut = new DirectSoundOut(g, 100);

@@ -1017,6 +1017,7 @@
       <DependentUpon>SSLConfig.cs</DependentUpon>
     </Compile>
     <Compile Include="Utilities\ConnectionOptions.cs" />
+    <Compile Include="Utilities\BoundedFrameBuffer.cs" />
     <Compile Include="Utilities\Logger.cs" />
     <Compile Include="Utilities\NativeMethods.cs" />
     <Compile Include="Utilities\NetworkBrowser.cs" />

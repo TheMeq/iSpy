@@ -57,7 +57,7 @@ namespace iSpyApplication
             MainForm.Conf.WSPassword = txtPassword.Text.Trim();
 
             error = MainForm.StopAndStartServer();
-            Application.DoEvents();
+            Refresh();
             return error=="";
         }
 
@@ -115,7 +115,7 @@ namespace iSpyApplication
 
                 Next.Enabled = false;
                 Next.Text = "...";
-                Application.DoEvents();
+                Next.Refresh();
                 
                 MainForm.Conf.DHCPReroute = chkReroute.Checked;
                 MainForm.Conf.SpecificIP = chkBindSpecific.Checked;

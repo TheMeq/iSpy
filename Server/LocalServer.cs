@@ -188,13 +188,9 @@ namespace iSpyApplication.Server
             }
             try 
             {
-                //start the thread which calls the method 'StartListen'
                 if (Running)
                 {
-                    while (_th.ThreadState == ThreadState.AbortRequested)
-                    {
-                        Application.DoEvents();
-                    }
+                    return "";
                 }
                 
             }
