@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.Remoting.Messaging;
+using iSpyApplication.Utilities;
 using NAudio.Wave;
 
 namespace iSpyApplication.Sources.Audio.streams
@@ -102,7 +103,7 @@ namespace iSpyApplication.Sources.Audio.streams
             if (samples.Length > 0)
             {
                 var da = new DataAvailableEventArgs((byte[]) samples.Clone());
-                DataAvailable(this, da);
+                SafeEventDispatch.DataAvailable(DataAvailable, this, da, "AudioInStream data available");
 
             }
         }

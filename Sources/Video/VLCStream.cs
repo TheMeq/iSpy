@@ -311,7 +311,7 @@ namespace iSpyApplication.Sources.Video
                 var sampleBuffer = new float[bytes];
                 var read = _sampleChannel.Read(sampleBuffer, 0, bytes);
 
-                da(this, new DataAvailableEventArgs(buf, bytes));
+                SafeEventDispatch.DataAvailable(da, this, new DataAvailableEventArgs(buf, bytes), "VLC video audio data available");
 
                 if (Listening) WaveOutProvider?.AddSamples(buf, 0, bytes);
             }

@@ -1,5 +1,6 @@
 ﻿using System;
 using iSpyApplication.Sources.Audio.streams;
+using iSpyApplication.Utilities;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -222,7 +223,7 @@ namespace iSpyApplication.Sources.Audio.talk
                     WaveOutProvider?.AddSamples(e.Buffer, 0, l);
                 }
                 
-                DataAvailable(this, new DataAvailableEventArgs((byte[])e.Buffer.Clone(), l));
+                SafeEventDispatch.DataAvailable(DataAvailable, this, new DataAvailableEventArgs((byte[])e.Buffer.Clone(), l), "TalkDeviceStream data available");
             }
         }
 

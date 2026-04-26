@@ -3951,7 +3951,7 @@ namespace iSpyApplication.Server
                             imageStream.Position = 0;
                             // load the byte array with the image             
                             bmpFinal.Dispose();
-                            byte[] imageArray = imageStream.GetBuffer();
+                            byte[] imageArray = imageStream.ToArray();
                             sResponse +=
                                 "\r\n\r\n--myboundary\r\nContent-type: image/jpeg\r\nContent-length: " +
                                 imageArray.Length + "\r\n\r\n";

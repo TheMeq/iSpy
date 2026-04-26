@@ -517,7 +517,7 @@ namespace iSpyApplication.Sources.Video
                                                 var sampleBuffer = new float[data.Length];
                                                 int r = _sampleChannel.Read(sampleBuffer, 0, data.Length);
 
-                                                da(this, new DataAvailableEventArgs((byte[]) data.Clone(),r));
+                                                SafeEventDispatch.DataAvailable(da, this, new DataAvailableEventArgs((byte[]) data.Clone(),r), "KinectNetworkStream data available");
                                             }
                                         }
 
